@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // This rule allows anyone on the internet to view, edit, and delete
+    // all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // your app will lose access to your Firestore database
+    // match /{document=**} {
+      // allow read, write: if request.time < timestamp.date(2020, 6, 15);
+      // allow read, write: if false;
+
+    // Firestore では以下のアクションに対してルールを設定出来ます。
+    // - read (データ読み取り)
+    //   - get (単体データ)
+    //   - list (複数データ)
+    // - write (データ書き込み)
+    //   - create
+    //   - update
+    //   - delete
+    // view rawfirestore.rules hosted with ❤ by GitHub
+    // allow アクション名: 条件 とすることで特定のアクションに対して条件を指定できます。
+
+
+    // request 変数は、クライアントから受信したリクエストに関する情報を含んでおり、request.auth は Firebase Authentication から取得した現在ログインしているユーザーに関する情報を保持しています。 request.auth.uid が null でないことを確認することで、ユーザーがログイン中かどうかがわかります。
+    // firebase認証チェック
+    function isAuth() {
+      return request.auth.uid != null;
+    }
+
+    // 自分のUIDかどうかチェック
+    function isUserAuth(userId) {
+      return request.auth.uid == userId
+    }
+
+    // リクエストの中身が入っているか？
+    function require(param) {
+      return request.resource.data[param] != null
+    }
+
+    // データ登録のために送信された値に name や iconImageUrl が存在するかどうかチェックしています。 データ登録のために送信された値は request.resource.data[キー] で参照することができます。
+    // リクエストの中身が空文字か？
+    function isNotEmpty(param) {
+      return require(param)
+        && request.resource.data[param] is string
+        && request.resource.data[param].trim().size() != 0;
+    }
+
+    // usersCollectionに対するルール
+    match /users/{userId} {
+      allow get: if isAuth();
+      allow create: if isUserAuth(userId)
+        && isNotEmpty("name")
+        && isNotEmpty("iconImageUrl");
+    }
+  }
+}
